@@ -180,9 +180,10 @@ const StaffDirectory: React.FC<IStaffDirectoryProps> = (props) => {
     };
 
     const _searchBoxChanged = (newvalue: string): void => {
-        setCurrentPage(1);
-        _searchUsers(newvalue);
-        console.log(state);
+        setTimeout(() => {
+            setCurrentPage(1);
+            _searchUsers(newvalue);
+        }, 500);
     };
     _searchUsers = debounce(500, _searchUsers);
 
@@ -272,7 +273,7 @@ const StaffDirectory: React.FC<IStaffDirectoryProps> = (props) => {
                                             <>
                                                 <div style={{ width: '100%', display: 'inline-block' }}>
                                                     <Paging
-                                                        totalItems={state.users.length}
+                                                        totalItems={state.users ? state.users.length : 0}
                                                         itemsCountPerPage={pageSize}
                                                         onPageUpdate={_onPageUpdate}
                                                         currentPage={currentPage} />

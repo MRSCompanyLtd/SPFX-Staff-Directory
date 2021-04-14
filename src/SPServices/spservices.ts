@@ -11,6 +11,9 @@ export class spservices implements ISPServices {
         sp.setup({
             spfxContext: this.context
         });
+        graph.setup({
+            spfxContext: this.context
+        });
     }
 
     public async searchUsers(searchString: string, searchFirstName: boolean): Promise<SearchResults> {
@@ -26,7 +29,29 @@ export class spservices implements ISPServices {
                 SourceId: 'b09a7990-05ea-4af9-81ef-edfab16c4e31',
                 SortList: [{ "Property": "LastName", "Direction": SortDirection.Ascending }],
             });
-            return users;
+            users.PrimarySearchResults.map(async (user: any) => {
+                try {
+                    user = {...user, PictureURL: await this.getImageUrl(user)};
+                }
+                catch {
+
+                }
+            });
+            /*if (users && users.PrimarySearchResults.length > 0) {
+                for (let index = 0; index < users.PrimarySearchResults.length; index++) {
+                    let user: any = users.PrimarySearchResults[index];
+                    if (user.PictureURL) {
+                        try {
+                            user = {...user, PictureURL: await this.getImageUrl(user)};
+                        }
+                        catch {
+                            
+                        }
+                        // user = { ...user, PictureURL: `/_layouts/15/userphoto.aspx?size=M&accountname=${user.WorkEmail}` };
+                        users.PrimarySearchResults[index] = user;
+                    }
+                }
+            }*/
         } catch (error) {
             Promise.reject(error);
         }
@@ -52,6 +77,13 @@ export class spservices implements ISPServices {
         });
     }
 
+    public async getImageUrl(user: any) {
+        const photo = await graph.users.getById(user.WorkEmail).photo.getBlob();
+        const url = window.URL;
+        const pictureURL = url.createObjectURL(photo);
+        return pictureURL;
+    }
+
     public async searchUsersNew(searchString: string, srchQry: string, isInitialSearch: boolean, filter: string): Promise<SearchResults> {
         let qrytext: string = '';
         if (isInitialSearch) qrytext = `FirstName:${searchString}* OR LastName:${searchString}*`;
@@ -63,10 +95,9 @@ export class spservices implements ISPServices {
             if (qrytext.length <= 0) qrytext = '';
         }
         qrytext += filter;
-        console.log(qrytext);
         const searchProperties: string[] = ["FirstName", "LastName", "PreferredName", "WorkEmail", "OfficeNumber", "PictureURL", "WorkPhone", "MobilePhone", "JobTitle", "Department", "Skills", "PastProjects", "BaseOfficeLocation", "SPS-UserType", "GroupId"];
         try {
-            let users = await sp.search(<SearchQuery>{
+            let users = await sp.searchWithCaching(<SearchQuery>{
                 Querytext: qrytext,
                 RowLimit: 500,
                 EnableInterleaving: true,
@@ -74,15 +105,14 @@ export class spservices implements ISPServices {
                 SourceId: 'b09a7990-05ea-4af9-81ef-edfab16c4e31',
                 SortList: [{ "Property": "LastName", "Direction": SortDirection.Ascending }],
             });
-            if (users && users.PrimarySearchResults.length > 0) {
-                for (let index = 0; index < users.PrimarySearchResults.length; index++) {
-                    let user: any = users.PrimarySearchResults[index];
-                    if (user.PictureURL) {
-                        user = { ...user, PictureURL: `/_layouts/15/userphoto.aspx?size=M&accountname=${user.WorkEmail}` };
-                        users.PrimarySearchResults[index] = user;
-                    }
+            users.PrimarySearchResults.map(async (user: any) => {
+                try {
+                    user = {...user, PictureURL: await this.getImageUrl(user)};
                 }
-            }
+                catch {
+                    return;
+                }
+            });
             return users;
         } catch (error) {
             Promise.reject(error);
